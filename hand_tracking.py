@@ -11,9 +11,9 @@ from gesture import Gesture
 import wnd
 
 MONITOR_NAME = "Teams Gesture Control"
-WEBCAM_NR = 1 # zweite Cam benötig
+WEBCAM_NR = 0 # zweite Cam benötigt. 0 = erste Cam, 1 = zweite Cam etc 
 SHOW_MONITOR = True
-DEMO_MODE = False
+DEMO_MODE = True
 
 cap = cv2.VideoCapture(WEBCAM_NR)
 mpHands = mp.solutions.hands
@@ -62,18 +62,20 @@ with mpHands.Hands(max_num_hands = 1, min_detection_confidence=0.8, min_tracking
                 
                 if SHOW_MONITOR or DEMO_MODE:
                     draw_gesture_on_image(img=img, handLms=handLms, gesture=gesture_new, mpHands=mpHands)
+                    # print(handLms.landmark[0])
+                    
             
             if gesture_new != gesture:
                     gesture = gesture_new
                     if gesture == Gesture.PINKY_UP:
                         if not DEMO_MODE:
                             wnd.set_recent_teams_window_active()
-                            pyautogui.hotkey('ctrl', 'shift', 'm')
+                            pyautogui.hotkey('ctrl', 'shift', 'm') # TODO: Shortcut aus der Enum einfügen
                         print(Gesture.PINKY_UP)
                     elif gesture == Gesture.INDEX_FINGER_UP:
                         if not DEMO_MODE:
                             wnd.set_recent_teams_window_active()
-                            pyautogui.hotkey('ctrl', 'shift', 'k')
+                            pyautogui.hotkey('ctrl', 'shift', 'k') # TODO: Shortcut aus der Enum einfügen
                         print(Gesture.INDEX_FINGER_UP)
                     elif gesture == Gesture.THUMB_UP:
                         if not DEMO_MODE:
