@@ -5,11 +5,19 @@ import time
 import os
 # import mss
 from PIL import Image
+from PIL import ImageGrab
 import pyautogui
 from time import sleep
 import win32gui
 from gesture import Gesture
 import wnd
+from mss import mss
+
+w, h = 800, 640
+bounding_box = {'top': 100, 'left': 100, 'width': w, 'height': h}
+
+sct = mss()
+
 
 MONITOR_NAME = "Teams Gesture Control"
 WEBCAM_NR = 0 # zweite Cam benötigt. 0 = erste Cam, 1 = zweite Cam etc 
@@ -21,12 +29,19 @@ mpHands = mp.solutions.hands
 mpDraw = mp.solutions.drawing_utils
 
 
+
 gesture = Gesture.NO_GESTURE
 
 def get_img_from_cam():
     success, img=cap.read()
     imgRGB = cv2.cvtColor(img,cv2.COLOR_BGR2RGB)
     return img, imgRGB
+
+def get_img_from_screen():
+    img_screenshot_RGB = np.array(sct.grab(bounding_box))
+    img_screenshot_RGB = cv2.cvtColor(img_screenshot_RGB, cv2.COLOR_RGB2BGR)
+    img_screenshot_BGR = cv2.cvtColor(img_screenshot_RGB,cv2.COLOR_RGB2BGR)
+    return np.array(img_screenshot_RGB), np.array(img_screenshot_BGR)
 
 def get_gesture_from_lms(handLms) -> Gesture:
     gesture = None
@@ -45,18 +60,19 @@ def get_gesture_from_lms(handLms) -> Gesture:
 
 def draw_gesture_on_image(img, handLms, gesture: Gesture, mpHands) -> None:
     mpDraw.draw_landmarks(img, handLms, mpHands.HAND_CONNECTIONS)
-    h,w,c=img.shape
-    cv2.putText(img, 
-        str(gesture.value["action"]), 
-        (int(handLms.landmark[gesture.value["landmark_nr"]].x*w), int(handLms.landmark[gesture.value["landmark_nr"]].y*h)), 
-        cv2.FONT_HERSHEY_COMPLEX_SMALL, 
-        fontScale=2, 
-        color=(255,255,255), 
-        thickness=2)
+    # h,w,c=img.shape
+    # cv2.putText(img, 
+    #     str(gesture.value["action"]), 
+    #     (int(handLms.landmark[gesture.value["landmark_nr"]].x*w), int(handLms.landmark[gesture.value["landmark_nr"]].y*h)), 
+    #     cv2.FONT_HERSHEY_COMPLEX_SMALL, 
+    #     fontScale=2, 
+    #     color=(255,255,255), 
+    #     thickness=2)
 
 
 with mpHands.Hands(max_num_hands = 10, min_detection_confidence=0.8, min_tracking_confidence=0.8) as hands:
     while cap.isOpened():
+        # imgRGB, img = get_img_from_screen()
         img, imgRGB = get_img_from_cam()
         results = hands.process(imgRGB)
         if results.multi_hand_landmarks:
@@ -65,9 +81,23 @@ with mpHands.Hands(max_num_hands = 10, min_detection_confidence=0.8, min_trackin
                 
                 x_component = handLms.landmark[4].x - handLms.landmark[2].x
                 y_component = handLms.landmark[4].y - handLms.landmark[2].y
-                # vector_thumb = np.array()
+                vector_thumb = np.array([x_component, y_component])
+                vector_norm = 1-(((vector_thumb / np.linalg.norm(vector_thumb))+1)/2)
 
-                print(f"x: {x_component} y: {y_component}")
+                star_rating = int((vector_norm[1])* 5) +1
+
+
+                print(f"vector: {star_rating}")
+                mpDraw.draw_landmarks(img, handLms, mpHands.HAND_CONNECTIONS)
+                h,w,c=img.shape
+                cv2.circle(img, (int(handLms.landmark[4].x*w), int(handLms.landmark[4].y*h)), 40, (0, int(vector_norm[1]*255), 255- int(vector_norm[1]*255)), cv2.FILLED)
+                cv2.putText(img, 
+                    str(star_rating), 
+                    (int(handLms.landmark[4].x*w), int(handLms.landmark[4].y*h)), 
+                    cv2.FONT_HERSHEY_COMPLEX_SMALL, 
+                    fontScale=3, 
+                    color=(255,255,255), 
+                    thickness=2)
 
 
                 if SHOW_MONITOR or DEMO_MODE:
